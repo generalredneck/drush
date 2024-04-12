@@ -215,4 +215,29 @@ final class ConfigExportCommands extends DrushCommands
             }
         }
     }
+
+    /**
+     * Display a diff of the active configuration set versus what's on disk.
+     *
+     * @command config:diff
+     *
+     * @usage drush config:diff
+     *   Display a diff of the active configuration set versus what's on disk.
+     */
+    public function diff(): void
+    {
+        $destination_dir = ConfigCommands::getDirectory();
+        $sync_directory = Settings::get('config_sync_directory');
+        // Prepare the configuration storage for the export.
+        if ($sync_directory !== null && $destination_dir == Path::canonicalize($sync_directory)) {
+            $target_storage = $this->getConfigStorageSync();
+            $config_comparer = new StorageComparer($this->getConfigStorageExport(), $target_storage, $this->getConfigManager());
+            if ($config_comparer->createChangelist()->hasChanges()) {
+                $diff = ConfigCommands::getDiff($target_storage, $this->getConfigStorageExport(), $this->output());
+                // Only delete .yml files, and not .htaccess or .git.
+                $target_storage->deleteAll();
+                $this->logger()->notice($diff);
+            }
+        }
+    }
 }
